@@ -240,7 +240,25 @@ Power BI uses several file types and reusable assets, each with a different purp
 
 **Exam tip:** reusable layout and model without data, with parameters → .pbit. Preconfigured connection to a source → .pbids. One governed model for many reports → shared semantic model (live connection, Build permission). Source control → .pbip.
 
-## 2.7 Exam quick reference
+## 2.7 External tools: which one for what
+
+Several tasks cannot be done in Power BI Desktop and need an external tool that connects through the XMLA endpoint (read-write mode on the capacity and the tenant setting must be enabled).
+
+| Tool | Use it for |
+| --- | --- |
+| **Tabular Editor** | Calculation groups, object-level security (column permissions), perspectives, translations, bulk changes with **C# scripts** (for example hide every column that ends with "Key", set Summarize By to None, set `IsKey`), **Best Practice Analyzer** rules, editing Direct Lake models. |
+| **DAX Studio** | Writing and running DAX queries, **Server Timings** (formula engine vs storage engine), query plans, **VertiPaq Analyzer** (memory used by tables and columns). |
+| **ALM Toolkit** | Comparing two models and deploying only the differences (schema diff and merge). |
+| **SQL Server Management Studio (SSMS)** | Connecting to the XMLA endpoint to run XMLA/TMSL scripts and DMV queries. |
+| **Power BI Desktop** | Visual modeling, relationships, measures, RLS roles, PBIP projects. Cannot create calculation groups in the normal UI or set column-level security. |
+
+**Exam tips**
+
+  - Calculation groups, OLS, bulk property changes by script → **Tabular Editor**.
+  - Timings and query analysis of a slow DAX query → **DAX Studio**.
+  - Compare and deploy model differences → **ALM Toolkit**.
+
+## 2.8 Exam quick reference
 
   - > Version history, branches, and pull requests on workspace items → Git integration (Azure DevOps or GitHub).
 

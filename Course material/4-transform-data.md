@@ -334,6 +334,169 @@ Only stored procedures can be called with this activity. To run a view or a func
 
 **Exam tip:** a pipeline step must run T-SQL with parameters against a warehouse → Stored procedure activity pointing to the warehouse, with the procedure name and its parameters.
 
-## 4.11 Exam quick reference
+## 4.11 Window functions, CTAS, SELECT INTO and table clones
+
+**Window functions** compute a value per row over a group of rows without collapsing them. The pattern *"latest row per key"* numbers the rows and keeps number 1.
+
+```sql
+WITH CustomerBase AS (
+    SELECT CustomerID, CustomerName, PostalCode, LastUpdated,
+           ROW_NUMBER() OVER (PARTITION BY CustomerID ORDER BY LastUpdated DESC) AS x
+    FROM dbo.CustomerChanges
+)
+SELECT CustomerID, CustomerName, PostalCode, LastUpdated
+FROM CustomerBase
+WHERE x = 1;
+```
+
+  - `PARTITION BY` = the group (one numbering per customer); `ORDER BY ... DESC` = newest first.
+  - `ROW_NUMBER()` gives 1, 2, 3...; `RANK()`/`DENSE_RANK()` give ties the same number; `LAG()`/`LEAD()` read the previous/next row; `SUM() OVER (...)` gives running totals.
+  - A window function cannot be used directly in `WHERE`: compute it in a CTE or subquery, then filter (`WHERE x = 1`). `HAVING` is for aggregates, not for window numbers.
+
+**Creating a table from a query**
+
+| Statement | Result | Notes |
+| --- | --- | --- |
+| `CREATE TABLE t AS SELECT ...` (**CTAS**) | New table filled with the query result. | Fabric warehouse. Can read a lakehouse in the same workspace with three-part names: `FROM lakehouse1.dbo.customer`. |
+| `SELECT ... INTO t FROM ...` | New table from the query. | Also supported. |
+| `INSERT INTO t SELECT ...` | Adds rows to an **existing** table. | Table must already exist. |
+| `CREATE TABLE t2 AS CLONE OF t1` | **Zero-copy clone**: copies metadata and points to the same Parquet files. | Instant regardless of size, no extra storage until data diverges. |
+
+**Clone details:** the clone is independent after creation. Later data changes or schema changes on the source are **not** applied to the clone, and changes to the clone do not affect the source. Time travel clone: `AS CLONE OF t1 AT '2024-05-01T10:00:00'`. Use it to copy a table with minimal data copying.
+
+## 4.12 T-SQL functions for nulls, dates and choosing values
+
+| Function | What it does | Example |
+| --- | --- | --- |
+| `COALESCE(a, b, c)` | Returns the **first non-NULL** value. | `COALESCE(Weight, Quantity, 1)` = weight if present, else quantity if present, else 1. |
+| `ISNULL(a, b)` | Two-argument version of COALESCE. | `ISNULL(Price, 0)` |
+| `NULLIF(a, b)` | Returns NULL if a = b (avoids divide by zero). | `x / NULLIF(y, 0)` |
+| `GREATEST(a, b, c)` | Largest value among several **columns** (row-wise). | Highest of ListPrice, WholesalePrice, AgentPrice. |
+| `LEAST(a, b)` | Smallest value among several columns; **ignores NULL**. | Lowest of ListPrice and SalePrice. |
+| `MAX()` / `MIN()` | **Aggregates** over rows, not across columns. | Highest price of a group of rows. |
+| `IIF(cond, a, b)` | Inline if/else. | |
+| `CHOOSE(n, a, b, c)` | Picks the n-th item of a list. | |
+| `DATETRUNC(month, d)` | Truncates a date to the **start of the period** (first day of the month). | `DATETRUNC(month, OrderDate)` |
+| `DATE_BUCKET(...)` | Groups dates into fixed-size buckets. | |
+| `DATEPART(part, d)` | Returns a **number** (year, month, weekday number). | `DATEPART(YEAR, SaleDate)` |
+| `DATENAME(part, d)` | Returns the **name** as text (`weekday` → Monday). | `DATENAME(weekday, OrderDate)` |
+| `DATEFROMPARTS(y, m, d)` | Builds a date from parts. | |
+
+**Exam tips**
+
+  - First non-null → `COALESCE`. Largest/smallest across columns → `GREATEST`/`LEAST`. `MAX`/`MIN` work across rows.
+  - First day of the month → `DATETRUNC(month, ...)`. Day name → `DATENAME(weekday, ...)`.
+  - Filters on aggregates (`SUM(Amount) > 10000`) go in `HAVING` after `GROUP BY`; filters on columns (`DATEPART(YEAR, d) = 2023`) go in `WHERE`.
+
+## 4.13 Slowly changing dimensions (SCD)
+
+A slowly changing dimension manages how a dimension row changes over time (for example a customer who moves to a new city).
+
+| Type | Behaviour | History | Columns needed |
+| --- | --- | --- | --- |
+| **Type 1** | **Overwrite** the changed attributes in place. Insert rows for new natural keys. | None | None extra. |
+| **Type 2** | **Add a new row** for every change and close the old one. | Full history | **Surrogate key**, **effective start date**, **effective end date** (or an *IsCurrent* flag). The natural (business) key stays, but is no longer unique. |
+| **Type 3** | Keep the previous value in an extra column. | Limited (one previous value) | `PreviousCity`-style columns. |
+
+**Type 2 example**
+
+| CustomerSK | CustomerID | City | StartDate | EndDate | IsCurrent |
+| --- | --- | --- | --- | --- | --- |
+| 1 | C1 | Milan | 2022-01-01 | 2024-03-31 | 0 |
+| 2 | C1 | Rome | 2024-04-01 | 9999-12-31 | 1 |
+
+**Loading patterns**
+
+  - **Type 1:** update rows when non-key attributes changed, insert rows when the natural key does not exist in the dimension. No end dates, no duplicate rows.
+  - **Type 2:** when attributes change, update the effective end date of the current row, then insert a new row with the new values and a new surrogate key. Facts reference the surrogate key.
+  - In Fabric this can be done with T-SQL (`UPDATE` + `INSERT`), a dataflow, or a Spark Delta `MERGE`.
+
+**Exam tips**
+
+  - "Keep history of every version" → Type 2 → needs surrogate key + start/end date columns (columns that do not already exist).
+  - "Latest value only" → Type 1. "Current and previous value" → Type 3.
+
+## 4.14 Dimensional modeling decisions and the date dimension
+
+**Star schema design**
+
+  - One **fact table** at a chosen **grain** (for example one row per order item) holding measures and foreign keys; several **dimension tables** (Date, Product, Customer) holding descriptive attributes.
+  - Source tables are usually normalized (snowflake). Flatten them: **denormalize** parent tables into the dimension they describe, for example an entity such as *Company* is folded into the Product and Customer dimensions instead of staying as a separate table.
+  - Relationships between fact and dimension are based on the **key that identifies the dimension row**. When the source key is composite (for example CompanyID + ProductID), the relationship must use **both columns**, or a new single surrogate key that combines them.
+  - Use **surrogate keys** (integers) in dimensions, especially for SCD Type 2.
+
+**Date dimension**
+
+A date table has one row per day with attributes (year, quarter, month, month name, week, day name, fiscal period). It is needed for time intelligence. When there is no source for dates you must **generate** it:
+
+  - **Dataflow Gen2 / Power Query:** `List.Dates(#date(2020,1,1), 3653, #duration(1,0,0,0))` converted to a table, then add columns.
+  - **Stored procedure called from a pipeline** that fills the table with T-SQL (a loop or a recursive CTE / numbers table).
+  - **Notebook** with Spark (`sequence`/`explode`) or pandas (`date_range`).
+  - In a semantic model mark it as a date table (`Mark as date table`) so time-intelligence functions work.
+
+## 4.15 Power Query: profiling, unpivot, query folding and native queries
+
+**Data profiling (Data view options)**
+
+  - **Column quality** (valid, error, empty %), **column distribution** (distinct/unique counts) and **column profile** (statistics and value histogram).
+  - To see min and max of each column: enable **column profile**, enable the **details pane**, and show the **column profile in the details pane**.
+  - By default profiling uses the **first 1,000 rows**; switch to "based on entire data set" to profile everything.
+  - Distinct count lower than the row count → some values repeat (duplicates).
+  - M function `Table.Profile(table)` returns, for every column: Min, Max, Average, StandardDeviation, Count, NullCount, DistinctCount. `Table.Max` returns a single **row**, `Table.MaxN` the top N rows, `Table.Range` a slice of rows.
+
+**Unpivot** (columns → attribute/value rows)
+
+| Command | Effect |
+| --- | --- |
+| **Unpivot columns** | Unpivots the **selected** columns. |
+| **Unpivot other columns** | Select the identifier columns (for example VendorID) and unpivot **all the others**; new columns added later are unpivoted too. |
+| **Unpivot only selected columns** | Same as unpivot columns but ignores new columns added later. |
+
+**Query folding**
+
+  - Folding means Power Query translates the steps into a **single query run by the source** (for example SQL), which is fast.
+  - Steps that do not fold run in the **Power Query (mashup) engine**, after the data is downloaded. Once a step does not fold, the following steps usually do not fold either.
+  - Sources that cannot fold: **files** (CSV, Excel, JSON). For them incremental refresh cannot push the date filter, so the refresh scans everything.
+  - In Dataflow Gen2 you can see folding indicators and the query plan on each step.
+
+**Native query and EnableFolding**
+
+```m
+let
+    Source   = Sql.Databases("server.database.windows.net"),
+    Database = Source{[Name = "db"]}[Data],
+    Query    = Value.NativeQuery(
+                   Database,
+                   "SELECT * FROM customer WHERE country IN ('USA','UK')",
+                   null,
+                   [EnableFolding = true])
+in
+    Query
+```
+
+`Value.NativeQuery` runs your own SQL; **`EnableFolding = true`** lets later foldable steps be added on top and processed by the SQL engine.
+
+## 4.16 Join types and merging queries
+
+| Join | Returns |
+| --- | --- |
+| **Inner** | Only rows with a match in both tables. |
+| **Left outer** | All rows of the left table + matches from the right. |
+| **Right outer** | All rows of the right table + matches from the left. |
+| **Full outer** | **All rows of both tables**, with NULL where there is no match. |
+| **Left anti** | Rows of the left table with **no** match in the right. |
+| **Right anti** | Rows of the right table with no match in the left. |
+| **Cross** | Every combination (Cartesian product). |
+
+These names are the same in the Fabric **visual query editor**, in Power Query **Merge queries** and (without "outer"/"anti" keywords) in T-SQL.
+
+**Merge vs Append (Power Query)**
+
+  - **Merge queries** = join (adds columns from another table based on matching keys).
+  - **Append queries** = union (stacks rows of tables with the same columns).
+
+**Fuzzy matching** (Merge with *Use fuzzy matching*): tolerates differences between keys. Options include **similarity threshold**, **ignore case**, **ignore spaces** and a transformation table. To join values that differ only by spaces with minimum effort → Merge queries + fuzzy matching with *ignore spaces*.
+
+## 4.17 Exam quick reference
 
   - Run T-SQL from a pipeline → Stored procedure activity (connect to the warehouse, procedure name, parameters).

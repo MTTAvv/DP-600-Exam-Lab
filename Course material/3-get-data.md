@@ -266,7 +266,135 @@ Open the activity and go to the **General** tab:
 
 **Exam tip:** automatically re-run a failed step → Retry and Retry interval on the pipeline activity. Do something different when a step fails → On fail path. Notify on failure → Outlook or Teams activity.
 
-## 3.11 Exam quick reference
+## 3.11 Pipeline activities cheat sheet
+
+| Activity | What it does | Typical use |
+| --- | --- | --- |
+| **Copy data** | Moves data between a source and a destination (many connectors, with mapping, partitioning, staging). | Bronze layer ingestion. |
+| **Dataflow** | Runs a Dataflow Gen2 (Power Query M). | Low-code transformation inside a pipeline. |
+| **Notebook** / **Spark job definition** | Runs Spark code. | Heavy or custom transformation. |
+| **Stored procedure** | Runs a T-SQL stored procedure on a warehouse or SQL database. Does not return a result set to use later. | Transform inside the warehouse (Gold layer). |
+| **Script** | Runs T-SQL (DDL/DML/queries) directly. | Ad hoc SQL steps. |
+| **Lookup** | Reads a value or a result set (from a query, table, or **stored procedure**) and exposes it as output to later activities. | Get a watermark (max OrderID), a count, or a config table. |
+| **Get Metadata** | Returns metadata of a file or folder (exists, size, child items). | Check for files before loading. |
+| **Invoke pipeline** | Calls another pipeline. | Modular orchestration, a "master" pipeline. |
+| **ForEach, If Condition, Switch, Until, Wait, Fail** | Control flow. | Loops, branching, waiting, forced failure. |
+| **Web, Outlook, Teams** | Call a REST API, send an email or a message. | Alerts and integrations. |
+
+**Using a Lookup output:** a later activity reads it with an expression such as `@activity('Lookup1').output.firstRow.MaxOrderID`.
+
+**Dependency paths** (conditions between activities): **On success** (default), **On fail**, **On completion** (runs after success *or* failure), **On skip**. If the second activity must run even if the first fails → *On completion*.
+
+**Orchestration pattern (medallion in one workspace):** one pipeline with Copy data (Bronze) → Dataflow activity (Silver) → Stored procedure activity (Gold), chained with On success, and a **schedule** on the pipeline.
+
+**Exam tips**
+
+  - Need the result of a stored procedure (for example count and average) in later activities → **Lookup** activity.
+  - Need to run a stored procedure and ignore the result → Stored procedure activity.
+  - Run M (Power Query) code in a pipeline → **Dataflow** activity.
+
+## 3.12 Copy activity settings
+
+The Copy data activity has tabs for **Source**, **Destination**, **Mapping** and **Settings**.
+
+| Where | Setting | What it does |
+| --- | --- | --- |
+| Source | **Enable partition discovery** / partition options | Reads partitioned data (folders like `year=2024/month=01`) or splits a large table read into parallel ranges. |
+| Source | **Recursively** | Includes files in subfolders. |
+| Source | Additional columns | Adds constant or expression columns to the output. |
+| Destination | **Table action: Append** | Adds the new rows to the existing table; existing data and schema are kept. |
+| Destination | **Table action: Overwrite** | Drops and recreates the table with the source schema and loads the data. Use it when the **schema changes regularly** and the table must follow it. |
+| Destination | **Partition columns** | Partitions the destination Delta table by the chosen columns. Available only with the **Overwrite** table action, because the table is recreated with the new partitioning. |
+| Settings | **Enable staging** | Uses an interim storage for some sources/destinations (for example to bulk-load a warehouse). |
+| Settings | Degree of copy parallelism, retry | Throughput and resilience. |
+
+**Exam tips**
+
+  - Replace the table and adopt the source schema → Destination, **Table action = Overwrite**.
+  - Partition an unpartitioned lakehouse table while copying → Destination, **Overwrite** + choose the partition column.
+  - "Enable partition option" on the **Source** tab speeds up reading; it does not partition the destination table.
+
+## 3.13 PySpark essentials in a Fabric notebook
+
+**Read data**
+
+```python
+df = spark.read.format("delta").load("Tables/sales")      # path of a table in the default lakehouse
+df = spark.read.parquet("abfss://fs1@storage1.dfs.core.windows.net/files/sales.parquet")
+df = spark.read.csv("Files/sales.csv", header=True, inferSchema=True)
+df = spark.sql("SELECT * FROM Lakehouse1.sales")           # a table (or shortcut in Tables) is read by name
+```
+
+**Look at the data**
+
+| Function | Result |
+| --- | --- |
+| `display(df)` | Interactive table with a **Chart view** (use it to explore data visually in the notebook). |
+| `df.show()` | Prints the first rows as text; no statistics, no chart. |
+| `df.printSchema()` | Column names and types. |
+| `df.describe()` | count, mean, stddev, min, max for numeric and string columns. |
+| `df.summary()` | Same as describe plus the quartiles (25%, 50%, 75%). Use it for min, max, mean, stddev for all columns. |
+| `df.explain()` | Prints the **execution plan**, not data statistics (returns nothing to chain). |
+
+**Transform**
+
+```python
+from pyspark.sql import functions as F
+
+df2 = (df.withColumn("Age", F.col("Age").cast("int"))      # change a type and keep all other columns
+         .withColumn("pickupDate", F.col("pickupDateTime").cast("date"))
+         .filter("fareAmount > 0 AND fareAmount < 100"))
+```
+
+  - `withColumn` adds or replaces one column and **keeps all the others**; `select` returns only the listed columns.
+  - Change a data type with `.cast("int")`, `.cast("date")`.
+
+**Joins**
+
+```python
+# large fact table + small dimension: broadcast the small one to avoid shuffling the large table
+result = transactions.join(F.broadcast(customers), "customer_id")
+```
+
+**Write data**
+
+```python
+df.write.format("delta").mode("append").saveAsTable("sales")                       # keep rows, add new ones
+df.write.format("delta").mode("overwrite").saveAsTable("sales")                    # replace
+df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable("sales")   # new columns allowed
+df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("sales")  # replace the schema too
+df.write.partitionBy("year", "month").mode("overwrite").parquet("Files/SalesOrder")  # Parquet files, NOT a Delta table
+```
+
+  - `saveAsTable` registers a **managed table** in the lakehouse (visible in Lakehouse explorer and SQL endpoint); writing to `Files/...` only creates files.
+  - Modes: `append`, `overwrite`, `error`/`errorifexists` (default), `ignore`.
+  - **New columns in the incoming data** while keeping the existing rows → `append` + `mergeSchema = true`. `overwriteSchema` only works together with `overwrite`.
+
+**Scoring a model:** `PREDICT` is available in a notebook through Spark (Spark SQL and PySpark), not through T-SQL or DAX.
+
+**Libraries and scale:** use **PySpark** (distributed, reads OneLake in parallel) for very large data; **pandas** runs on a single node and is for small data.
+
+**Types of analytics:** *descriptive* (what happened: aggregates, charts of distributions), *diagnostic* (why), *predictive* (what will happen), *prescriptive* (what to do).
+
+## 3.14 Lakehouse files, tables and Load to Tables
+
+A lakehouse has two areas.
+
+| Area | Content | Registered as tables? |
+| --- | --- | --- |
+| **Tables** | Delta tables (managed tables, shortcuts to Delta data). | **Yes**: visible in Spark and in the **SQL analytics endpoint**. |
+| **Files** | Any file or folder (CSV, JSON, Parquet, images...) at any level. | No. Not visible in the SQL endpoint. |
+
+**Rules**
+
+  - The **SQL analytics endpoint only exposes Delta tables**. To query S3/ADLS data with T-SQL: create the **shortcut in the Tables section** and make sure the data is in **Delta** format.
+  - A shortcut in **Files** is just a folder; Spark can read it, but it does not become a table.
+  - **Load to Tables** (right-click a file or folder in Lakehouse explorer) converts CSV/Parquet files into a **managed Delta table** (with V-Order). Use it to turn the files of a subfolder into a table without writing code.
+  - Creating a shortcut does not copy or convert data; **Optimize** (right-click a table) works on existing tables, it does not convert files.
+
+**Exam tip:** "convert the CSV files of a folder into delta with V-Order from Lakehouse explorer" → **Load to Tables**.
+
+## 3.15 Exam quick reference
 
   - Low-code transformations, Power Query, 150+ connectors → dataflow Gen2.
 

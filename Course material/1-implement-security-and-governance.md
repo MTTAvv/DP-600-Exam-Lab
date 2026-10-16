@@ -187,7 +187,53 @@ Endorsement highlights trustworthy items and marks official ones. It neither gra
 
 **Exam tip:** “signal that a model is trustworthy across the organization” → Certified, which only reviewers authorized by the Fabric admin can apply. “The owner wants to recommend their item” → Promoted. “Core data, single source of truth” → Master data, only on items with data.
 
-## 1.6 Exam quick reference
+## 1.6 T-SQL permissions: GRANT, DENY and REVOKE
+
+Warehouse and SQL analytics endpoint security is managed with standard T-SQL permission statements. Permissions can be given on a **database**, a **schema**, or a single **object** (table, view, procedure, function).
+
+```sql
+GRANT SELECT ON SCHEMA::sales TO [user1@contoso.com];
+GRANT ALTER ON SCHEMA::schemaA TO [user1@contoso.com];
+DENY  SELECT ON OBJECT::sales.Customers(Email) TO [user1@contoso.com];   -- column-level
+REVOKE SELECT ON SCHEMA::sales FROM [user1@contoso.com];
+```
+
+**Which permission for which action**
+
+| Goal | Permission | Notes |
+| --- | --- | --- |
+| Read data | `SELECT` | Can be granted on a schema, a table, a view, or specific columns. |
+| Insert, update, delete rows | `INSERT`, `UPDATE`, `DELETE` | Warehouse only (the lakehouse SQL endpoint is read-only). |
+| Run a stored procedure or function | `EXECUTE` | |
+| Truncate a table | `ALTER` on the table | `TRUNCATE TABLE` requires ALTER on the table. Granting `ALTER ON SCHEMA::schemaA` limits it to the objects in schemaA only. |
+| Create or change objects | `CREATE TABLE`, `ALTER` | `CREATE TABLE` is granted at database level, plus `ALTER` on the target schema. |
+
+**Scope rules**
+
+  - `SCHEMA::name` covers every current and future object in that schema; `OBJECT::schema.name` covers one object; `DATABASE::name` covers everything.
+  - **DENY always wins** over GRANT.
+  - Least privilege: grant at the narrowest scope that satisfies the requirement (usually the schema).
+  - Workspace roles Admin, Member and Contributor bypass these T-SQL permissions, so the restricted user must be a Viewer or only have the item shared.
+
+**Exam tip:** "truncate tables in one schema only" → `GRANT ALTER ON SCHEMA::schemaA TO User1`.
+
+## 1.7 Testing row-level security
+
+RLS in a semantic model is defined with **roles** and DAX filter expressions. A **dynamic** role uses `USERPRINCIPALNAME()` to filter rows by the signed-in user (for example, an employee table matched with the user's email).
+
+```dax
+[Email] = USERPRINCIPALNAME()
+```
+
+**How to test**
+
+  - **Power BI Desktop:** Modeling > View as, then pick one or more roles (and optionally *Other user*).
+  - **Power BI service:** semantic model > Security > the three dots next to a role > **Test as role**. For a *dynamic* role you also have to impersonate a **specific user**, because the filter depends on who is signed in. Testing the role alone does not show what that person sees.
+  - Members of the workspace with edit rights (Admin, Member, Contributor) are not filtered by RLS, so they cannot validate it by simply opening the report. Share with a Viewer instead.
+
+**Exam tip:** dynamic RLS → "Test as role" combined with impersonating the specific user (the HR manager), not just the role.
+
+## 1.8 Exam quick reference
 
   - > Workspace roles → Viewer is read-only (T-SQL only, no Spark), Contributor creates and writes and reads with Spark, Member adds people, Admin manages the workspace.
 

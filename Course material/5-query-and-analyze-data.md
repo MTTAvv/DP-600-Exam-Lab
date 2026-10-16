@@ -206,7 +206,29 @@ The rule is simple: a SELECT can never run a stored procedure, but a stored proc
 
 **Exam tip:** you can query a view from a view, and call a function from a view or a stored procedure, but you cannot call a stored procedure from a function.
 
-## 5.6 Exam quick reference
+## 5.6 Monitoring and troubleshooting warehouse queries
+
+**Tools**
+
+| Need | Tool |
+| --- | --- |
+| Is the **capacity** being throttled? Utilization and overage over time | **Microsoft Fabric Capacity Metrics app** (throttling is a capacity-level behaviour; settings pages and the Monitoring hub do not show it). |
+| Overview of activity runs (pipelines, notebooks, refreshes) | **Monitoring hub**. |
+| A query that has been running for too long: what is it doing, is it blocked? | **DMVs** `sys.dm_exec_requests` (running requests, wait type, blocking session), `sys.dm_exec_sessions`, `sys.dm_exec_connections`. |
+| History of past queries, slow and frequent queries | **Query insights** views (`queryinsights.exec_requests_history`, `frequently_run_queries`, `long_running_queries`). |
+
+```sql
+SELECT session_id, status, start_time, wait_type, blocking_session_id, command
+FROM sys.dm_exec_requests
+WHERE status <> 'background';
+```
+
+  - Fabric warehouse uses the SQL Server-style DMVs (`sys.dm_exec_*`). The `sys.dm_pdw_*` views belong to Azure Synapse dedicated SQL pools, not to Fabric.
+  - Throttling symptom: all queries slow down at the same times during the day → look at the Capacity Metrics app first.
+
+**Exam tip:** "report query stuck for 45 minutes, what is blocking it?" → `sys.dm_exec_requests`. "Is Fabric throttling my warehouse?" → Capacity Metrics app.
+
+## 5.7 Exam quick reference
 
   - Connect to a warehouse → SQL connection string, Entra ID authentication, any TDS client (SSMS, VS Code, portal editor).
 
