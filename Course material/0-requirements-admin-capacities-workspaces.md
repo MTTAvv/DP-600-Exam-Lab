@@ -185,7 +185,34 @@ Only a workspace admin can do this. Steps:
 
 Alternatives: attach an environment to a single notebook, or use inline %pip install (session-only, not persisted).
 
-## 0.10 Exam quick reference
+## 0.10 Domains, workspace identity and choosing the data store
+
+**Domains** group workspaces by business area (for example Sales, Research) so that the OneLake catalog can be filtered and governed per area.
+
+| Task | Who can do it |
+| --- | --- |
+| Create a domain, create subdomains, assign workspaces to domains | **Fabric administrator** (domains are created in the admin portal). |
+| Manage an existing domain (edit settings, assign workspaces to it) | **Domain admin** (can also create subdomains of the domains they administer). |
+| Assign *their* workspaces to a domain | **Domain contributor** (workspace admins nominated by a domain admin). |
+
+If a user must create a new domain *and* its subdomains, only the **Fabric admin** role covers everything (least privilege cannot be satisfied with a domain role, which only manages existing domains).
+
+**Workspace identity**
+
+  - A **workspace identity** is an automatically managed service principal tied to a workspace. It lets the workspace authenticate **securely** to resources such as Azure Storage (trusted workspace access, shortcuts, pipelines) without sharing keys or user credentials.
+  - Typical solution: create the workspace, **create a workspace identity**, grant that identity access on the storage account, and give an Entra **group** the Contributor role (assign roles to groups, not to each user, to minimise administration).
+  - Keep yourself as the only **Admin**: Admin role assigned to your account, others get lower roles.
+
+**Which data store?**
+
+| Need | Store |
+| --- | --- |
+| T-SQL writes, **multi-table transactions**, dynamic data masking, row/column-level security in T-SQL | **Warehouse** |
+| Spark and Python, files + tables, semi-structured and unstructured data, T-SQL **read-only** endpoint | **Lakehouse** |
+| Real-time / time-series telemetry, KQL | **KQL database (Eventhouse)** |
+| Semantic model | Not a data store: it sits on top of one. |
+
+## 0.11 Exam quick reference
 
   - Number of capacities → department, workload (dev/prod) and region.
 

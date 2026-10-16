@@ -185,3 +185,19 @@ CALCULATE(SELECTEDMEASURE(), DATESMTD('Date'[Date]))
   - **Display folders, perspectives, hidden fields** reduce clutter for report creators; **PBIP** projects make TMDL/JSON definitions editable in VS Code and Git friendly.
   - Dynamic RLS must be tested for a **specific user**, see section 1.7.
 
+## 6.6 Dynamic format strings
+
+A **dynamic format string** is a DAX expression, attached to a measure, that returns the **format string** to use depending on context (for example the currency chosen in a slicer).
+
+```dax
+-- Format string expression of the measure TotalSalesAmount
+SWITCH(SELECTEDVALUE('Currency'[Code]),
+       "EUR", "#,0.00 €",
+       "USD", "$#,0.00",
+       "#,0.00")
+```
+
+  - The measure keeps its numeric type, so it can still be aggregated and sorted; only the display changes.
+  - A **field parameter** lets users switch *which fields* a visual shows. A **linguistic schema** is for Q&A natural language. `WINDOW` is a window function and does not format values.
+  - Calculation groups can also change the format string of the measures they modify.
+

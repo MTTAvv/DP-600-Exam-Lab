@@ -394,7 +394,38 @@ A lakehouse has two areas.
 
 **Exam tip:** "convert the CSV files of a folder into delta with V-Order from Lakehouse explorer" → **Load to Tables**.
 
-## 3.15 Exam quick reference
+## 3.15 OneLake shortcuts: authentication and shortcut vs copy
+
+**Authentication by source**
+
+| Shortcut target | Credentials to provide |
+| --- | --- |
+| **Amazon S3** | **Access key ID** and **secret access key** of an IAM user (plus the bucket URL). A SAS token is for Azure Storage, not AWS. |
+| **ADLS Gen2** | Organizational account (Entra), service principal, workspace identity, or account key / SAS token. |
+| **Google Cloud Storage** | HMAC key and secret. |
+| **OneLake (another lakehouse/warehouse)** | The identity of the caller (no extra secret). |
+
+**Shortcut or copy?**
+
+  - A **shortcut** exposes external data **without copying it**: minimal development effort, always current. Create it in **Files** (any format) or **Tables** (Delta only).
+  - Use a **copy** (pipeline Copy data, copy job, Dataflow Gen2) when you need a transformed, performance-optimised or isolated copy of the data in OneLake.
+  - "Add data from a CSV in an Azure Storage account outside Fabric with the least effort" → **shortcut** (no ingestion code).
+
+## 3.16 Eventstream transformations
+
+An **eventstream** captures, transforms and routes streaming events (Event Hubs, Kafka, IoT Hub, custom apps) to destinations such as a lakehouse, an eventhouse (KQL database), or Activator.
+
+| Transformation | What it does |
+| --- | --- |
+| **Filter** | Keeps events that match a condition. |
+| **Manage fields** | Adds, removes, renames or changes the type of fields. |
+| **Aggregate** | Calculates continuously over a time window: sum, average, min, max, count, **percentile (continuous/discrete)**... |
+| **Group by** | Aggregates per group over a window. |
+| **Join / Union / Expand** | Combine streams, merge schemas, flatten arrays. |
+
+**Exam tip:** a continuous calculation such as a percentile over the stream with minimal effort → add an **Aggregate** transformation to the eventstream (no KQL queryset needed).
+
+## 3.17 Exam quick reference
 
   - Low-code transformations, Power Query, 150+ connectors → dataflow Gen2.
 

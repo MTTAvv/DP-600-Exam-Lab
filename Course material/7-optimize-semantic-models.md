@@ -92,3 +92,9 @@ DESCRIBE HISTORY Customer;
   - Warehouse tables are Delta too, but the warehouse engine optimizes and compacts them **automatically** with V-Order, which is why a warehouse needs no manual maintenance.
   - Remove unused files → **VACUUM** on a schedule. Combine small files into bigger ones → **OPTIMIZE** on a schedule.
 
+## 7.6 Large semantic model storage format and XMLA operations
+
+- The **Large semantic model storage format** (setting at workspace / model level on Premium or Fabric capacity) stores the model so that it can grow beyond 10 GB, and it makes **XMLA operations faster**: deployments, metadata writes and refreshes by tools such as Tabular Editor or ALM Toolkit finish sooner.
+  - Choose the **Large** format (not *Small*) when the requirement is to **minimise the time to deploy** or increase the **speed of XMLA write operations**. It is also the prerequisite for **query scale-out**.
+  - Deleting unused columns reduces size but does not change the storage format; the Direct Lake storage mode is a different setting.
+

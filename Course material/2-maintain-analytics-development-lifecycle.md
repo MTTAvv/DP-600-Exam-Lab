@@ -258,7 +258,38 @@ Several tasks cannot be done in Power BI Desktop and need an external tool that 
   - Timings and query analysis of a slow DAX query → **DAX Studio**.
   - Compare and deploy model differences → **ALM Toolkit**.
 
-## 2.8 Exam quick reference
+## 2.8 Project files, .gitignore, Git settings and XMLA prerequisites
+
+**Which project file for which purpose**
+
+| File | Contains | Use |
+| --- | --- | --- |
+| **PBIX** | Report + model + **data** in one binary file. | Normal authoring and sharing. |
+| **PBIT** | Template: report structure, formatting, model and data source connections, **no data**. | Create multiple reports from the same predefined starting point. |
+| **PBIDS** | Only data source connection information. | Standardise connections. |
+| **PBIP** | Folder of text files (TMDL/JSON) for the report and the semantic model. | Git, branches, diffs, editing in VS Code, Fabric Git integration. |
+
+**What to ignore in Git (PBIP):** the local cache **`.pbi/cache.abf`** contains the **data** of the model, and `localSettings.json` contains user-specific settings. Both are added to `.gitignore` (Power BI Desktop does it by default); reference `cache.abf` when you must keep data values out of the repository. `model.bim`/TMDL and `definition.pbir` are the source of truth and must be committed.
+
+**Git integration prerequisites for a workspace member (for example Contributor)**
+
+  - Tenant settings: **Users can synchronize workspace items with their Git repositories** and **Users can create Fabric items** must be enabled for the user (the GitHub-specific setting applies only to GitHub repos).
+  - A Contributor can **commit** items; connecting a workspace to a repo requires the Admin role.
+
+**XMLA endpoint prerequisites (recap)**
+
+  - The workspace must be on **Premium per user, Premium capacity or a Fabric capacity** (the **License mode** setting of the workspace); a **Pro** workspace does not support XMLA.
+  - The capacity setting **XMLA Endpoint = Read Write** is needed to publish or edit models from Tabular Editor, and the tenant setting *Allow XMLA endpoints* must be on.
+  - Apps can use a service principal or managed identity instead of a user sign-in.
+
+## 2.9 Deployment pipelines: folders and items
+
+- A deployment pipeline copies items between stage workspaces (Development → Test → Production). Items are **paired** by name and type; unpaired items are created in the target stage.
+  - **Folders are supported**: the folder structure of the source workspace is preserved when you deploy. If Lakehouse1 sits in `Folder1` in the source, the target workspace gets `Folder1\Lakehouse1` and any item at the root (for example Pipeline1) stays at the root.
+  - Data and credentials are **not** copied; use **deployment rules** (data source, parameter, default lakehouse) so that each stage points to its own sources.
+  - Permissions needed: access to the pipeline plus at least Contributor on the workspaces involved.
+
+## 2.10 Exam quick reference
 
   - > Version history, branches, and pull requests on workspace items → Git integration (Azure DevOps or GitHub).
 

@@ -90,7 +90,7 @@ exec dbo.sp_Employee_GetByFirstName 'Jack'
 
 In a Dataflow Gen2, there are a number of methods for adding a column to your query:
 
-![](img/image2.png)
+![](../Photos/ch4_image1.png)
 
   - Column from examples - allows you to give some expected values, and the Dataflow will try to guess the pattern, and generate your M query that outputs your expected values.
 
@@ -497,6 +497,53 @@ These names are the same in the Fabric **visual query editor**, in Power Query *
 
 **Fuzzy matching** (Merge with *Use fuzzy matching*): tolerates differences between keys. Options include **similarity threshold**, **ignore case**, **ignore spaces** and a transformation table. To join values that differ only by spaces with minimum effort → Merge queries + fuzzy matching with *ignore spaces*.
 
-## 4.17 Exam quick reference
+## 4.17 Loading a Type 2 SCD in a warehouse
+
+A Type 2 load has two actions: **close** the current row of changed members and **insert** the new version (and new members).
+
+```sql
+-- 1) close the old version
+UPDATE d SET d.EndDate = SYSDATETIME(), d.IsCurrent = 0
+FROM dbo.DimCustomer d
+JOIN stg.Customer s ON s.CustomerID = d.CustomerID
+WHERE d.IsCurrent = 1 AND (s.City <> d.City);
+
+-- 2) insert new versions and new customers
+INSERT INTO dbo.DimCustomer (CustomerID, City, StartDate, EndDate, IsCurrent)
+SELECT s.CustomerID, s.City, SYSDATETIME(), '9999-12-31', 1
+FROM stg.Customer s
+LEFT JOIN dbo.DimCustomer d ON d.CustomerID = s.CustomerID AND d.IsCurrent = 1
+WHERE d.CustomerID IS NULL OR d.City <> s.City;
+```
+
+  - For a **large** dimension the expected answer is **UPDATE and INSERT**: only the changed rows are touched, so resource usage is minimal. `TRUNCATE + INSERT` reloads everything (and loses history); CTAS rebuilds the whole table.
+  - MERGE can express the same logic in one statement, but its support in the Fabric warehouse is more limited than UPDATE/INSERT, so verify availability in your environment.
+
+## 4.18 Power Query date arithmetic and the visual query editor
+
+**Days between two dates in Power Query**
+
+```m
+= Duration.Days([Shipping_Date] - [Order_Date])
+```
+
+| Function | Purpose |
+| --- | --- |
+| `Duration.Days(duration)` | The days part of a duration (use it with a date subtraction). |
+| `Duration.TotalDays` | Total days including the fractional part. |
+| `Duration.From` | Converts a value to a duration. |
+| `Date.AddDays(date, n)` | Adds days to a date (returns a date, not a difference). |
+| `DateTime.LocalNow()` | Current date and time. |
+
+**Visual query editor (warehouse / SQL endpoint)**
+
+To get *"total sales per category for the last quarter"* without writing T-SQL:
+
+  1. **Filter rows** on the date column (the *last quarter* option) to restrict the period.
+  2. **Group by** the category column and **sum** the amount column.
+
+Remove duplicates, keep top rows or arithmetic on the amount do not implement a period filter or a per-category total.
+
+## 4.19 Exam quick reference
 
   - Run T-SQL from a pipeline → Stored procedure activity (connect to the warehouse, procedure name, parameters).

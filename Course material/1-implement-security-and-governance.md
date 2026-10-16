@@ -118,7 +118,7 @@ Prerequisites is the user must have **Read permission ONLY**. This means:
 
   - > **You should share the Warehouse (item-level) with NO ADDITIONAL PERMISSIONS, like the screenshot below:**
 
-![](img/image1.png)
+![](../Photos/ch1_image1.png)
 
 **  
 **For OLS, use a GRANT statement, like this, to give the user (or role) SELECT permissions on the table:
@@ -233,7 +233,51 @@ RLS in a semantic model is defined with **roles** and DAX filter expressions. A 
 
 **Exam tip:** dynamic RLS → "Test as role" combined with impersonating the specific user (the HR manager), not just the role.
 
-## 1.8 Exam quick reference
+## 1.8 Row-level security in a warehouse and the user functions of DAX
+
+**T-SQL RLS (Warehouse and SQL analytics endpoint)** uses two objects:
+
+  1. An **inline table-valued function** (the predicate) that returns a row when the user may see the data.
+  2. A **security policy** that adds the function as a FILTER (or BLOCK) predicate on the table.
+
+```sql
+CREATE FUNCTION Security.fn_customer_filter(@SalesRep AS varchar(100))
+RETURNS TABLE WITH SCHEMABINDING AS
+RETURN SELECT 1 AS ok WHERE @SalesRep = USER_NAME();
+GO
+CREATE SECURITY POLICY Security.CustomerPolicy
+ADD FILTER PREDICATE Security.fn_customer_filter(SalesRep) ON dbo.Table1
+WITH (STATE = ON);
+```
+
+A database role, stored procedure or constraint is **not** part of the RLS pair (roles may be used to grant access, but the objects that implement RLS are the function and the security policy).
+
+**DAX functions for dynamic RLS in a semantic model**
+
+| Function | Returns |
+| --- | --- |
+| `USERPRINCIPALNAME()` | The user principal name (UPN, like user@contoso.com) of the signed-in user. Use it for dynamic RLS in the Fabric/Power BI service. |
+| `USERNAME()` | Domain\user in Desktop and UPN in the service, but it can be blank in some contexts. Prefer `USERPRINCIPALNAME()`. |
+| `USEROBJECTID()` | The Microsoft Entra object ID (a GUID), not the UPN. |
+
+Creating a role does not change what a measure returns; if `USERNAME()` returns blank and you need the UPN, switch the measure to `USERPRINCIPALNAME()`.
+
+## 1.9 Warehouse sharing: default permissions
+
+When you **share** a warehouse (or SQL analytics endpoint) with a user and keep only the **default permissions**, the user gets **Read**:
+
+  - They can **connect to the SQL analytics endpoint (TDS)** of the warehouse.
+  - They **cannot** read table data (that needs `ReadData`, "Read all SQL endpoint data", or T-SQL `GRANT SELECT`).
+  - They cannot read the underlying Parquet files in OneLake (that needs `ReadAll`) and cannot build reports on the default semantic model (that needs `Build`).
+
+| Extra permission when sharing | Adds |
+| --- | --- |
+| ReadData | Read all data through the SQL endpoint (T-SQL). |
+| ReadAll | Read the files and tables in OneLake (Spark, OneLake explorer). |
+| Build | Create reports/semantic models on the default semantic model. |
+| Reshare | Share the item with others. |
+
+## 1.10 Exam quick reference
 
   - > Workspace roles → Viewer is read-only (T-SQL only, no Spark), Contributor creates and writes and reads with Spark, Member adds people, Admin manages the workspace.
 
