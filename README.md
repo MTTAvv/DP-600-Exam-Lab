@@ -4,7 +4,7 @@
 
 Il progetto unisce in un unico posto:
 
-- un **simulatore di domande a scelta multipla** con modalità esame, studio e dev, spiegazioni, suggerimenti e correzione finale;
+- un **simulatore di domande a scelta multipla** con modalità esame e studio, spiegazioni, suggerimenti e correzione finale;
 - gli **appunti di studio** organizzati per area dell'esame, collegati direttamente alle domande;
 - i **materiali di riferimento** utilizzati per costruire il percorso.
 
@@ -32,23 +32,13 @@ Per una preparazione efficace si consiglia di:
 | --- | --- |
 | **Modalità esame** | Domande in ordine casuale, correzione e punteggio alla fine. |
 | **Modalità studio** | Correzione immediata, spiegazione, suggerimento che aiuta a ragionare e link alla sezione degli appunti da ripassare. |
-| **Modalità dev** | Come la modalità studio, ma con le domande nell'ordine in cui sono scritte. |
+| **Modalità dev** | Come la modalità studio, ma con le domande nell'ordine in cui sono scritte nel file .html a scopo di manutenzione e correzione. |
 | **Filtro per argomenti** | Permette di esercitarsi su tutto o solo su alcuni capitoli (da `0` a `7`), con gli stessi nomi dei file degli appunti. |
 | **Case study** | Sezioni dedicate (Contoso e Litware), con il testo dello scenario sempre visibile. |
 | **Da rivedere** | Le domande segnate con ★ restano evidenziate nella barra di navigazione. |
 
 ---
 
-## 📂 Struttura del repository
-
-| Elemento | Contenuto |
-| --- | --- |
-| `index.html` | Il simulatore (pagina unica, con le domande incluse). |
-| [`Course material/`](Course%20material/) | Appunti di studio in Markdown, uno per area dell'esame (da `0` a `7`) più un'appendice con le slide del corso. |
-| [`Source material/`](Source%20material/) | I materiali di partenza usati per costruire il percorso di studio e le domande. |
-| `Photos/` | Le immagini usate dalle domande e dagli appunti. |
-
----
 
 ## 📚 Materiali utilizzati
 
@@ -65,15 +55,15 @@ Oltre a quel materiale, il progetto è stato integrato con il **materiale di rif
 
 ## 🔄 Aggiornamenti dell'esame e contenuti non più ufficiali
 
-L'esame DP-600 viene **aggiornato periodicamente** (ogni alcuni mesi) da Microsoft: alcuni argomenti possono essere **rimossi o ridimensionati** nella guida ufficiale, ad esempio **PySpark** e l'uso dei **notebook**, come dichiarato nella documentazione ufficiale Microsoft (consulta sempre la [Study Guide](https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/dp-600) per l'elenco aggiornato delle competenze valutate).
+L'esame DP-600 viene **aggiornato periodicamente** (ogni N° indefinito di mesi) da Microsoft: alcuni argomenti possono essere **ridimensionati o completamente rimossi** --eg.**PySpark** e l'uso dei **notebook**--, come dichiarato nella documentazione ufficiale Microsoft (consulta sempre la [Study Guide](https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/dp-600) per l'elenco aggiornato delle competenze valutate).
 
-Per questo motivo, alcune domande presenti nel simulatore potrebbero riguardare argomenti che, **ufficialmente, non dovrebbero più essere inclusi nell'esame**. Si è comunque scelto di **mantenerle**, perché alcune persone che hanno sostenuto l'esame hanno riferito che domande su questi temi possono ancora comparire. Si tratta di segnalazioni non verificabili ufficialmente: non c'è alcuna garanzia che tali domande siano presenti (o assenti) nell'esame reale.
+Per questo motivo, alcune domande presenti nel simulatore potrebbero riguardare argomenti che, **ufficialmente, non dovrebbero più essere inclusi nell'esame**. Si è comunque scelto di **mantenerle**, perché alcune persone che hanno sostenuto l'esame hanno riferito che domande su questi temi possono ancora comparire. 
 
 Ti consigliamo di dare priorità agli argomenti indicati nella guida ufficiale più recente e di considerare queste domande come un approfondimento.
 
 ---
 
-## ⚖️ Note legali
+## ⚖️ Note 
 
 ### Progetto indipendente e non affiliato
 
