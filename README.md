@@ -8,7 +8,7 @@ Il progetto unisce in un unico posto:
 - gli **appunti di studio** organizzati per area dell'esame, collegati direttamente alle domande;
 - i **materiali di riferimento** utilizzati per costruire il percorso.
 
-🚀 **Apri il simulatore:** <https://mttavv.github.io/DP-600-Exam-Lab/>
+🚀 **[Apri il simulatore](https://mttavv.github.io/DP-600-Exam-Lab/)**
 
 > **Nota:** i materiali e le domande d'esame sono in lingua inglese; il simulatore e i suggerimenti sono in italiano.
 
