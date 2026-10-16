@@ -82,3 +82,8 @@ Nel campo `prompt`, usa `[1]`, `[2]` e così via per indicare i punti da complet
 - `anchor` deriva dal titolo della sezione in minuscolo, senza punteggiatura e con i trattini al posto degli spazi. Ad esempio, `3.4 Notebook` diventa `34-notebook`.
 - Il riferimento completo segue il formato `Course material/<file>#<anchor>`.
 - Se la pagina rimane vuota, controlla la sintassi JSON: spesso manca una virgola o una virgoletta. VS Code evidenzia gli errori; in alternativa, apri la console del browser con `F12`.
+
+
+Se siete coraggiosi.
+
+Altrimenti, usate l'IA :)
