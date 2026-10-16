@@ -103,6 +103,12 @@ Il progetto è attualmente in **fase di test**. Suggerimenti, segnalazioni di er
 
 Qualsiasi condivisione del progetto, dei relativi materiali o dei suoi contenuti al di fuori dell'organizzazione deve essere preventivamente sottoposta a una valutazione interna, al fine di analizzarne gli eventuali impatti e verificarne l'appropriatezza prima di procedere. La condivisione esterna non è quindi da considerarsi autorizzata senza una preventiva valutazione interna.
 
+### Autore e uso dell'intelligenza artificiale
+
+**DP-600 Exam Lab è stato ideato e realizzato da Matteo Proietti.**
+
+Il simulatore è stato sviluppato con il **supporto di strumenti di intelligenza artificiale**, utilizzati per la scrittura del codice .html, l'organizzazione dei materiali e la redazione di spiegazioni, suggerimenti e appunti. I contenuti generati o rielaborati con l'IA possono contenere **errori, imprecisioni o informazioni non aggiornate**, anche se rivisti dall'autore: verificali sempre sulla documentazione ufficiale Microsoft.
+
 ---
 
 ### English summary
