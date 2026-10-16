@@ -99,7 +99,7 @@ function setAns(q,v){startTimer();answers[q.number]=v;render()}
 function render(){
  if(!session.length){$('prompt').innerHTML='<div class="empty">Nessuna domanda per questo filtro.</div>';$('options').innerHTML='';return}
  const q=session[idx],id=q.number,lock=showFb(q);
- $('qnum').textContent=`DOMANDA ${idx+1} / ${session.length} · ${q.case?'CASE STUDY '+q.case.toUpperCase()+' · ':''}N. ${q.disp}`;
+ $('qnum').textContent=`DOMANDA ${idx+1} / ${session.length} · ${q.case?'CASE STUDY '+q.case.toUpperCase()+' · ':''}DOMANDA ORIGINALE NR° ${q.disp}`;
  $('topic').textContent=q.case?('Case study · '+q.case):'DP-600';
  $('progress').style.width=((idx+1)/session.length*100)+'%';
  $('case').innerHTML=q.case&&CASES[q.case]?`<details class="case"${$('section').value!=='single'?' open':''}><summary>📄 ${esc(CASES[q.case].title)} — testo del case study</summary><div class="cbody">${CASES[q.case].html}</div></details>`:'';
