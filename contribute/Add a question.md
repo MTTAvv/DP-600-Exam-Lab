@@ -87,3 +87,6 @@ Nel campo `prompt`, usa `[1]`, `[2]` e così via per indicare i punti da complet
 Se siete coraggiosi.
 
 Altrimenti, usate l'IA :)
+
+
+FARE SEMPRE UN BACKUP PRIMA DI EFFETTUARE QUALSIASI MODIFICA
