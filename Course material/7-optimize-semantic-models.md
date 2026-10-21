@@ -97,4 +97,4 @@ DESCRIBE HISTORY Customer;
 - The **Large semantic model storage format** (setting at workspace / model level on Premium or Fabric capacity) stores the model so that it can grow beyond 10 GB, and it makes **XMLA operations faster**: deployments, metadata writes and refreshes by tools such as Tabular Editor or ALM Toolkit finish sooner.
   - Choose the **Large** format (not *Small*) when the requirement is to **minimise the time to deploy** or increase the **speed of XMLA write operations**. It is also the prerequisite for **query scale-out**.
   - Deleting unused columns reduces size but does not change the storage format; the Direct Lake storage mode is a different setting.
-
+  - With the **default (small) storage format** a published or refreshed model is limited to about **10 GB**; a model approaching tens of GB (for example ~50 GB on an F64) can only be published and refreshed if the **Large semantic model storage format** is enabled. The maximum size then depends on the capacity SKU. Parameters, scheduled refresh and query scale-out do not change the size limit.

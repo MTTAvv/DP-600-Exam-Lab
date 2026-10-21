@@ -330,6 +330,7 @@ df = spark.sql("SELECT * FROM Lakehouse1.sales")           # a table (or shortcu
 | Function | Result |
 | --- | --- |
 | `display(df)` | Interactive table with a **Chart view** (use it to explore data visually in the notebook). |
+| `display(df.limit(100))` | Shows only the **first 100 rows** as an interactive table: `limit(n)` restricts the DataFrame, `display()` renders it. `df.describe(100)` and `df.printSchema(100)` are not valid ways to show rows. |
 | `df.show()` | Prints the first rows as text; no statistics, no chart. |
 | `df.printSchema()` | Column names and types. |
 | `df.describe()` | count, mean, stddev, min, max for numeric and string columns. |
@@ -425,7 +426,42 @@ An **eventstream** captures, transforms and routes streaming events (Event Hubs,
 
 **Exam tip:** a continuous calculation such as a percentile over the stream with minimal effort → add an **Aggregate** transformation to the eventstream (no KQL queryset needed).
 
-## 3.17 Exam quick reference
+## 3.17 Eventhouse OneLake availability and the Real-Time hub
+
+- **Real-Time hub**: the central catalog in Fabric to discover, explore and subscribe to streaming data (eventstreams, KQL tables, Azure/other event sources).
+- **Eventhouse** holds one or more **KQL databases** optimized for real-time, time-series and log data.
+- **OneLake availability**: enabling it on a KQL database (or table) exposes its data in **OneLake as Delta tables**. Other Fabric items can then use the same data: Spark notebooks, the SQL analytics endpoint, shortcuts from a lakehouse and Direct Lake semantic models, without copying it.
+- Ingestion into the KQL database is done with an **eventstream** (or other ingestion methods); pipelines move data, and alerts only notify.
+
+**Exam rule of thumb:** "other Fabric items must query the data in the KQL database" = enable **OneLake availability** (connect the database to OneLake).
+
+## 3.18 Copy data activity: mandatory settings and choosing the tool for large volumes
+
+**General tab of any pipeline activity**
+
+| Property | Mandatory? | Default |
+| --- | --- | --- |
+| Name | **Yes (the only one)** | – |
+| Description | No | empty |
+| Timeout | No | 12 hours |
+| Retry | No | 0 |
+| Retry interval (sec) | No | 30 |
+| Secure input / Secure output | No | off |
+
+**Which tool for moving data?**
+
+| Scenario | Best choice |
+| --- | --- |
+| Very large volumes (hundreds of millions of rows, TB), no transformation | **Pipeline Copy data activity** (highest throughput, low-code) |
+| Low-code transformations on small/medium volumes | Dataflow Gen2 |
+| Complex transformations, custom logic, code-first | Notebook (PySpark) |
+| Return a small result set to use in the pipeline | Lookup activity |
+| Data already in another storage and you only need to read it, not copy it | Shortcut |
+| Manual one-off upload of a few files | Lakehouse explorer upload |
+
+Tip: Copy data supports parallelism and (for supported sources) **Fast Copy**; Lookup returns small result sets only.
+
+## 3.19 Exam quick reference
 
   - Low-code transformations, Power Query, 150+ connectors → dataflow Gen2.
 
@@ -464,3 +500,7 @@ An **eventstream** captures, transforms and routes streaming events (Event Hubs,
   - Automatic re-run on failure → Retry and Retry interval on the pipeline activity (defaults 0 and 30 seconds, timeout 12 hours).
 
   - Different action on failure → On fail dependency path; alert with Outlook or Teams activity.
+
+  - Other Fabric items must query a KQL database → enable OneLake availability (connect the database to OneLake).
+
+  - Copy data General tab → only Name is mandatory (Timeout 12 h, Retry 0, Retry interval 30 s are optional). Very large volume, no transformation, low-code → pipeline Copy data.

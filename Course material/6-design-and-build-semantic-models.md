@@ -201,3 +201,13 @@ SWITCH(SELECTEDVALUE('Currency'[Code]),
   - A **field parameter** lets users switch *which fields* a visual shows. A **linguistic schema** is for Q&A natural language. `WINDOW` is a window function and does not format values.
   - Calculation groups can also change the format string of the measures they modify.
 
+## 6.7 Field parameters
+
+A **field parameter** lets report users **switch which fields** (columns or measures) a visual shows, with a slicer, without duplicating visuals.
+
+- Create it in Power BI Desktop: **Modeling > New parameter > Fields**, select the fields (for example ProductCategory, Year, CustomerCity), keep "Add slicer to this page" checked.
+- Power BI creates a calculated table with `NAMEOF` references; use its column as the axis/legend/values of the visual, and the slicer drives which field is displayed.
+- Typical use: one chart that the user can break down by Product category **or** Year **or** City, or a visual that switches between measures.
+- Alternatives (several overlaid visuals with bookmarks, multiple pages, custom visuals) need much more development and maintenance.
+
+**Exam rule of thumb:** "a single visual that users can analyze by one of several fields, minimizing development effort" = **field parameter**.

@@ -394,6 +394,7 @@ A slowly changing dimension manages how a dimension row changes over time (for e
 
 | Type | Behaviour | History | Columns needed |
 | --- | --- | --- | --- |
+| **Type 0** | Attributes are **never changed** after the first load (fixed / original values). | None (values are frozen) | None extra. |
 | **Type 1** | **Overwrite** the changed attributes in place. Insert rows for new natural keys. | None | None extra. |
 | **Type 2** | **Add a new row** for every change and close the old one. | Full history | **Surrogate key**, **effective start date**, **effective end date** (or an *IsCurrent* flag). The natural (business) key stays, but is no longer unique. |
 | **Type 3** | Keep the previous value in an extra column. | Limited (one previous value) | `PreviousCity`-style columns. |
@@ -413,7 +414,8 @@ A slowly changing dimension manages how a dimension row changes over time (for e
 
 **Exam tips**
 
-  - "Keep history of every version" → Type 2 → needs surrogate key + start/end date columns (columns that do not already exist).
+  - "Keep history of every version" → Type 2 → needs surrogate key + start/end date columns (columns that do not already exist). A Type 2 dimension keeps a **fixed number of columns** and adds rows; Type 3 adds columns.
+  - "Never changes" → Type 0.
   - "Latest value only" → Type 1. "Current and previous value" → Type 3.
 
 ## 4.14 Dimensional modeling decisions and the date dimension
@@ -544,6 +546,21 @@ To get *"total sales per category for the last quarter"* without writing T-SQL:
 
 Remove duplicates, keep top rows or arithmetic on the amount do not implement a period filter or a per-category total.
 
-## 4.19 Exam quick reference
+## 4.19 Query folding: what breaks it and viewing the SQL
+
+**Query folding** = Power Query translates the steps into a single native query (for example T-SQL) executed by the source, instead of processing the data in the mashup engine.
+
+- Steps that **usually fold** against a relational source: filter rows / keep rows, select/remove columns, rename, sort, group by, merge (join) of tables from the **same source**, unpivot on many sources.
+- Steps that **break folding**: **Add index column**, merging with a query from a different source, custom functions, certain pivots, `Table.Buffer`, and data sources that are files.
+- After a step that breaks folding, all later steps run in the mashup engine, so put foldable steps (filters, column selection) **first**.
+- Check folding by right-clicking a step: **View Native Query** is enabled when the step folds.
+
+**Visual query editor (warehouse)**: building a query by drag and drop. The generated T-SQL can be inspected with **View SQL/View query**. With **Merge queries as new**, the merge creates a separate result query: make sure it is enabled for load so it is the query the editor uses as output.
+
+## 4.20 Exam quick reference
 
   - Run T-SQL from a pipeline → Stored procedure activity (connect to the warehouse, procedure name, parameters).
+
+  - Step that prevents query folding → Add index column (also merges across sources and custom functions); keep foldable steps first.
+
+  - SCD type 0 → never changes; type 2 → new row per change, history with a fixed number of columns.

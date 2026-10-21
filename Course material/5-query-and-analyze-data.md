@@ -54,6 +54,8 @@ SELECT * FROM dbo.vw_SalesByProduct;
 
   - **Reusable:** A view can query other views.
 
+  - **Rename columns:** a view can alias columns (`SELECT Amount AS SalesAmount ...`), hide columns or pre-join tables without changing the underlying table; build the report on the view when you need different column names.
+
   - **Semantic models:** reading a SQL view into a semantic model falls back to DirectQuery. Direct Lake is not possible, because Direct Lake reads Delta tables and a view has no Delta files behind it.
 
 **Exam tip:** a named, reusable query with no parameters → view. A semantic model built on a view cannot use Direct Lake: it uses DirectQuery.
@@ -228,7 +230,20 @@ WHERE status <> 'background';
 
 **Exam tip:** "report query stuck for 45 minutes, what is blocking it?" → `sys.dm_exec_requests`. "Is Fabric throttling my warehouse?" → Capacity Metrics app.
 
-## 5.7 Exam quick reference
+## 5.7 Warehouse statistics
+
+The Fabric warehouse query optimizer uses **statistics** (cardinality, value distribution, average column length) to choose an efficient plan. Out-of-date statistics lead to poor plans and slow queries.
+
+- Fabric creates and updates statistics **automatically** (on the fly when queries need them), but you can manage them manually:
+  - `CREATE STATISTICS stats_name ON dbo.Table (Column);`
+  - `UPDATE STATISTICS dbo.Table (stats_name);` (or the whole table)
+- Prioritize columns the optimizer uses to **filter, join, group and sort**: columns in `WHERE`, `JOIN`, `GROUP BY`, `ORDER BY` and `DISTINCT`.
+- The data type, being a primary key or having high cardinality are **not** by themselves the reason to update a statistic.
+- To find a slow query, use Query insights / DMVs (see 5.6), then check whether its statistics are stale.
+
+**Exam rule of thumb:** "manually update statistics to speed up a query" = update statistics on the columns used in **GROUP BY / WHERE / JOIN** clauses.
+
+## 5.8 Exam quick reference
 
   - Connect to a warehouse → SQL connection string, Entra ID authentication, any TDS client (SSMS, VS Code, portal editor).
 
@@ -245,3 +260,7 @@ WHERE status <> 'background';
   - Parameters and data changes, run with EXEC → stored procedure; can call functions, views and other procedures.
 
   - Views, functions and procedures appear in the warehouse Explorer under their schema, in separate folders.
+
+  - Update warehouse statistics manually → columns used in WHERE, JOIN, GROUP BY, ORDER BY, DISTINCT.
+
+  - Rename columns for a report without touching the table → view (alias).

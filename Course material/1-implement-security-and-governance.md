@@ -277,7 +277,37 @@ When you **share** a warehouse (or SQL analytics endpoint) with a user and keep 
 | Build | Create reports/semantic models on the default semantic model. |
 | Reshare | Share the item with others. |
 
-## 1.10 Exam quick reference
+## 1.10 Sharing content with external users
+
+External people (partners, customers) are Microsoft Entra **B2B guest users**. Sharing with them safely combines tenant settings, workspace design and data-level security:
+
+- **Tenant settings** (Fabric admin portal): who can invite external users and whether content can be shared with guests. The admin can restrict this to specific security groups.
+- **Distribution**: prefer a **Power BI app** (a curated, read-only package of reports and dashboards) over giving partners workspace roles. Never share through email attachments: it bypasses governance, sensitivity labels and refresh.
+- **Workspace roles**: do not add guests to workspace roles unless they must collaborate. Viewer is the lowest role, but it still sees workspace content.
+- **Data-level security**: apply **row-level security (RLS)** so each external user only sees their own rows; use **object-level security (OLS)** to hide tables or columns/measures.
+- **Source credentials**: configure the semantic model data source with a **fixed identity** (stored credentials) so partners never need direct access to the underlying data source.
+- **Sensitivity labels** travel with the content and can block or encrypt exports.
+
+**Exam rule of thumb:** external sharing = Power BI app + RLS + fixed identity on the data source; not email attachments, not broad workspace roles.
+
+## 1.11 Dynamic data masking
+
+**Dynamic data masking (DDM)** hides the *values* of sensitive columns from non-privileged users at query time, without changing the stored data (warehouse and SQL analytics endpoint).
+
+- Defined per column with a masking function: `default()`, `email()`, `partial(prefix, padding, suffix)`, `random()`.
+- Example: `ALTER TABLE dbo.Customer ALTER COLUMN Email ADD MASKED WITH (FUNCTION = 'email()');`
+- Users with the `UNMASK` permission (and admins/owners) see the real values; grant it with `GRANT UNMASK TO <user or role>`.
+- DDM is **not** row filtering (that is RLS) and **not** object hiding (that is OLS or GRANT/DENY): it only obscures values.
+
+| Need | Use |
+| --- | --- |
+| Hide specific values in a column | Dynamic data masking |
+| Show only some rows to each user | Row-level security |
+| Hide a table, column or measure | Object-level security / GRANT-DENY |
+| Control access to a specific object | T-SQL GRANT, DENY, REVOKE |
+| Classify and protect data | Sensitivity labels |
+
+## 1.12 Exam quick reference
 
   - > Workspace roles → Viewer is read-only (T-SQL only, no Spark), Contributor creates and writes and reads with Spark, Member adds people, Admin manages the workspace.
 
@@ -296,3 +326,7 @@ When you **share** a warehouse (or SQL analytics endpoint) with a user and keep 
   - > Sensitivity labels → defined in Microsoft Purview, enabled by the tenant setting; inherited when a report is created; they follow export to Excel, PowerPoint, and PDF.
 
   - > Endorsement → Promoted (owner or anyone with Write), Certified and Master data (only reviewers authorized by the Fabric admin); Master data only on items with data; dashboards cannot be promoted or certified.
+
+  - > Share with external partners → Power BI app + row-level security + fixed identity on the data source; never email attachments.
+
+  - > Hide the values of a column from non-privileged users → dynamic data masking (UNMASK permission shows real values); hide rows → RLS; hide objects → OLS or GRANT/DENY.
