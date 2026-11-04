@@ -49,7 +49,8 @@ These features come up in exam questions about how data is secured and moved.
 
 | Gateway                             | Use it for                                                                                                 | Setup                                                                                                                                                                        |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| On-premises data gateway            | Reaching on-premises sources such as SQL Server from Fabric.                                               | Install the gateway on an on-premises server → create an on-premises gateway connection in Fabric → use the connection in a dataflow or pipeline.                            |
+| On-premises data gateway (standard mode) | Reaching on-premises sources such as SQL Server from Fabric.                                               | Install the gateway on an on-premises server → create an on-premises gateway connection in Fabric → use the connection in a dataflow or pipeline.                            |
+| On-premises data gateway, **personal mode** | One person refreshing **Import** semantic models in Power BI from on-premises sources. Not shared, no DirectQuery or live connection, not for team or production use. | Install on your own computer; works only with your own credentials. |
 | Virtual network (VNet) data gateway | Reaching data sources protected inside an Azure virtual network. Managed by Microsoft, nothing to install. | In Azure: register the Microsoft.PowerPlatform resource provider, set up the virtual network and create a subnet for the gateway → then create the VNet gateway from Fabric. |
 
 **Exam tip:** on-premises SQL → on-premises data gateway (installed by you). Source inside an Azure virtual network → VNet data gateway (no installation).
@@ -212,7 +213,48 @@ If a user must create a new domain *and* its subdomains, only the **Fabric admin
 | Real-time / time-series telemetry, KQL | **KQL database (Eventhouse)** |
 | Semantic model | Not a data store: it sits on top of one. |
 
-## 0.11 Exam quick reference
+## 0.11 Fabric workspace settings
+
+Workspace settings are managed by **workspace Admins** (the settings icon of the workspace). The tenant and capacity admins can restrict some of them. The main tabs:
+
+| Tab / area | What you configure |
+| --- | --- |
+| **General** | Name, description, contact list, image, **license mode** (Pro, Premium per user, Premium capacity, **Fabric capacity**, Trial) and therefore the capacity the workspace uses. |
+| **OneLake** | Whether users can use the OneLake file explorer and whether item data can be accessed through OneLake paths. |
+| **Data Engineering/Science > Spark settings** | The **default pool** (starter pool or a custom pool), the **Spark runtime version**, the default **environment**, high-concurrency mode and Spark properties. They apply to every notebook and Spark job of the workspace unless an environment overrides them. |
+| **Git integration** | Connect the workspace to GitHub or Azure Repos (see 2.1). |
+| **Network security** | Workspace-level private links and outbound access rules. |
+| **Workspace identity** | Create the managed identity used to authenticate to storage (see 0.10). |
+| **Azure connections / System storage** | Azure Log Analytics connection and where the semantic model storage is kept. |
+
+- A workspace must be assigned to a **Fabric capacity** to use the Fabric experiences (lakehouse, warehouse, notebooks, pipelines); Pro or PPU workspaces only support Power BI items.
+- Use an **environment** to standardise libraries and Spark settings across notebooks (see 0.9).
+
+**Exam rule of thumb:** default Spark runtime or pool for all notebooks of a workspace = **Workspace settings > Data Engineering/Science > Spark settings**; assigning the capacity = **license mode** in the general settings.
+
+## 0.12 Creating a custom Power BI report theme
+
+A **report theme** is a **JSON file** that sets colours, fonts and visual formatting for the whole report, so every report of the organisation looks the same.
+
+- **Apply or import:** Power BI Desktop > **View > Themes > Browse for themes** and select the `.json` file.
+- **Customise:** View > Themes > **Customize current theme** (name and colours, text, visuals, page, filter pane), then **Save current theme** to export it as JSON and reuse it.
+- **Edit by hand:** the JSON can be edited in any editor.
+
+```json
+{
+  "name": "Contoso corporate",
+  "dataColors": ["#1F3A8A", "#3D4DB4", "#9FB0FF", "#F2C811"],
+  "background": "#FFFFFF",
+  "foreground": "#172033",
+  "tableAccent": "#1F3A8A"
+}
+```
+
+- A theme is **not** a template (`.pbit`), a data source file (`.pbids`) or a project (`.pbip`): those carry model structure, connections or source files, not formatting.
+
+**Exam rule of thumb:** reusable colours and fonts across reports = **JSON theme file** (Browse for themes).
+
+## 0.13 Exam quick reference
 
   - Number of capacities → department, workload (dev/prod) and region.
 
@@ -231,3 +273,9 @@ If a user must create a new domain *and* its subdomains, only the **Fabric admin
   - Who opens the admin portal → Global, Fabric or Power Platform administrator.
 
   - Restrict who can create workspaces → tenant setting limited to a security group.
+
+  - Gateway for a source in an Azure virtual network, nothing to install → **VNet data gateway**. Personal mode → Power BI Import refresh for one user only, not shared.
+
+  - Default Spark runtime or pool for every notebook of a workspace → **Workspace settings > Data Engineering/Science > Spark settings**.
+
+  - Reusable corporate colours and fonts → **JSON theme file** (View > Themes > Browse for themes).

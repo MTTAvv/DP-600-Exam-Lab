@@ -557,10 +557,91 @@ Remove duplicates, keep top rows or arithmetic on the amount do not implement a 
 
 **Visual query editor (warehouse)**: building a query by drag and drop. The generated T-SQL can be inspected with **View SQL/View query**. With **Merge queries as new**, the merge creates a separate result query: make sure it is enabled for load so it is the query the editor uses as output.
 
-## 4.20 Exam quick reference
+## 4.20 Flattening JSON: expanding records and lists
+
+JSON loaded in Power Query (dataflow or Power BI) arrives as nested values:
+
+- **Record**: a set of named fields. The expand button turns each field into a **column**.
+- **List**: an ordered series of values. The expand button (To New Rows) turns each item into a **row**.
+
+Typical steps: parse the JSON column (Transform > Parse > JSON), then **Expand** the Record and List columns until all columns are flat.
+
+| Need | Operation |
+| --- | --- |
+| Flatten nested JSON (Record/List) | Expand |
+| Stack tables with the same columns | Append queries |
+| Join tables on a key | Merge queries |
+| Turn columns into attribute-value rows | Unpivot |
+| Turn rows into columns | Pivot |
+
+## 4.21 Cleansing data with PySpark
+
+The same cleansing steps as in T-SQL (see 4.7), with DataFrame methods:
+
+```python
+from pyspark.sql import functions as F, Window
+
+df = df.dropDuplicates()                       # identical rows
+df = df.dropDuplicates(["CustomerID"])         # one row per key (any one is kept)
+df = df.dropna(subset=["CustomerID"])          # remove rows where the key is null
+df = df.dropna(how="all")                      # remove rows where every column is null
+df = df.fillna({"Quantity": 0, "Country": "n/a"})   # replace nulls
+df = df.withColumn("Name", F.trim(F.col("Name")))   # clean text
+df = df.filter(F.col("Amount").isNotNull())
+
+# keep the most recent row per key
+w = Window.partitionBy("CustomerID").orderBy(F.col("LastUpdated").desc())
+df = df.withColumn("rn", F.row_number().over(w)).filter("rn = 1").drop("rn")
+```
+
+| Goal | PySpark |
+| --- | --- |
+| Remove exact duplicate rows | `distinct()` or `dropDuplicates()` |
+| One row per key | `dropDuplicates(["key"])` or `row_number()` over a window |
+| Drop rows with nulls | `dropna(subset=[...])` |
+| Replace nulls | `fillna(value or dict)` |
+| Change a data type | `col.cast("int")` |
+
+## 4.22 De-aggregating data
+
+**Aggregation** summarises rows (GROUP BY). **De-aggregation** goes the other way: from a compact or summarised structure to **more detailed rows**. You cannot recover lost detail, but you can **expand** a structure that already contains it.
+
+| Situation | How |
+| --- | --- |
+| A column holds a delimited list ("P1,P2,P3") and you need one row per item | PySpark `explode(split(col, ","))`; Power Query **Split Column > By Delimiter > Into Rows**; T-SQL `STRING_SPLIT` |
+| Columns that are really values (Jan, Feb, Mar) | **Unpivot** (Power Query) or `stack` / `unpivot` in PySpark |
+| A nested list or record (JSON) | **Expand** (see 4.20) |
+| A quantity that must become one row per unit | Join to a numbers/date table or use `explode(sequence(...))` |
+
+```python
+from pyspark.sql import functions as F
+df.withColumn("ProductID", F.explode(F.split("Items", ","))).drop("Items")
+```
+
+**Exam rule of thumb:** one row per element of a list column → **explode**; columns to rows → **unpivot**.
+
+## 4.23 Bridge tables
+
+A **bridge table** resolves a **many-to-many** relationship between a fact table and a dimension, or between two dimensions, in a star schema.
+
+- Example: a **joint account** belongs to several customers, or a product belongs to several categories. The dimension cannot be joined one-to-many to the fact table without duplicating facts.
+- The bridge has **one row per combination** of the two keys (`AccountKey`, `CustomerKey`) and sometimes a **weighting factor** so measures are not double counted.
+- Design: `dimCustomer (1) → (*) Bridge (*) ← (1) dimAccount`, with `dimAccount (1) → (*) FactTransactions`.
+- It is built in the **lakehouse or warehouse** (a Delta table or a warehouse table) and then used by the semantic model (see 6.9).
+- Alternatives: denormalise (duplicates rows and can inflate measures) or a many-to-many relationship in the model (less transparent).
+
+**Exam rule of thumb:** "an entity belongs to many dimension members" = **bridge table** between the two dimension tables.
+
+## 4.24 Exam quick reference
 
   - Run T-SQL from a pipeline → Stored procedure activity (connect to the warehouse, procedure name, parameters).
 
   - Step that prevents query folding → Add index column (also merges across sources and custom functions); keep foldable steps first.
 
   - SCD type 0 → never changes; type 2 → new row per change, history with a fixed number of columns.
+
+  - PySpark: one row per key → `dropDuplicates(["key"])`; replace nulls → `fillna`; remove rows with null keys → `dropna(subset=[...])`.
+
+  - One row per element of a delimited list column → **explode(split(...))**; columns to rows → **unpivot**.
+
+  - Many-to-many between a fact or dimension and another dimension (joint accounts) → **bridge table**.

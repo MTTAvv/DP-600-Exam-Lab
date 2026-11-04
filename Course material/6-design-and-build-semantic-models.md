@@ -211,3 +211,85 @@ A **field parameter** lets report users **switch which fields** (columns or meas
 - Alternatives (several overlaid visuals with bookmarks, multiple pages, custom visuals) need much more development and maintenance.
 
 **Exam rule of thumb:** "a single visual that users can analyze by one of several fields, minimizing development effort" = **field parameter**.
+
+## 6.8 Time intelligence and filter-context functions
+
+**Date table:** mark it as a date table (Table tools > **Mark as date table**) and choose the unique, contiguous date column, so time intelligence works correctly.
+
+| Function | Use |
+| --- | --- |
+| `TOTALYTD(expr, dates [, "year-end"])` | Year-to-date. For a fiscal year ending June 30 use `TOTALYTD([Total Sales], 'Date'[Date], "6/30")`. |
+| `TOTALQTD`, `TOTALMTD` | Quarter-to-date, month-to-date. |
+| `SAMEPERIODLASTYEAR(dates)` | The same dates one year earlier (use inside CALCULATE). |
+| `DIVIDE(num, den [, alt])` | **Safe division**: returns BLANK (or `alt`) when the denominator is 0 or blank. Preferred over `/` with IF. |
+| `REMOVEFILTERS(col or table)` | Clears filters inside CALCULATE (for example the denominator of a percentage of total). |
+| `KEEPFILTERS(...)` | Keeps the existing filter and intersects it with the new one. |
+| `USERELATIONSHIP(col1, col2)` | Activates an **inactive** relationship for the CALCULATE (for example Sales[ShipDate] to Date). |
+| `RELATED(col)` | Row-context lookup of a column from the "one" side (calculated columns). |
+
+Percentage of total:
+
+```dax
+Sales % of Total =
+DIVIDE ( [Total Sales], CALCULATE ( [Total Sales], REMOVEFILTERS ( Product[Category] ) ) )
+```
+
+## 6.9 Relationships in a star-schema semantic model
+
+A star-schema model has one **fact** table surrounded by **dimension** tables.
+
+| Property | Recommended |
+| --- | --- |
+| **Cardinality** | **One-to-many** from the dimension (one side, unique key) to the fact table (many side). |
+| **Cross-filter direction** | **Single** (dimension filters the fact). Avoid *Both* unless needed: it hurts performance and can create ambiguity. |
+| **Active / inactive** | Only one **active** relationship between two tables. Extra paths (for example ShipDate) are **inactive** and activated in a measure with `USERELATIONSHIP`. |
+| **Many-to-many** | Supported natively, but prefer a **bridge table** (see 4.23): one-to-many from each dimension to the bridge, and a bridge-to-fact path. Keep cross-filtering to the necessary direction. |
+| **Hide** | Hide foreign-key and key columns and technical columns from report view; show the dimension attributes and measures. |
+| **Role-playing dimension** | One physical Date table with several relationships (Order date active, Ship date inactive), or one Date table copy per role. |
+
+- A relationship is created on columns of the **same data type**; duplicate keys on the "one" side cause an error (remove duplicates first).
+- Direct Lake models support the same relationship design; avoid many-to-many on large columns.
+
+**Exam rule of thumb:** dimension → fact = **one-to-many, single direction**; another date column → **inactive relationship + USERELATIONSHIP**.
+
+## 6.10 DAX iterators, window and information functions
+
+**Iterators** (`SUMX`, `AVERAGEX`, `MAXX`, `COUNTX`, `RANKX`) evaluate an expression **row by row** over a table and then aggregate; the expression runs in a row context.
+
+```dax
+Revenue = SUMX ( Sales, Sales[Quantity] * Sales[UnitPrice] )
+```
+
+`SUM(Sales[Quantity]) * SUM(Sales[UnitPrice])` is **wrong**: it aggregates first, then multiplies.
+
+**Window functions** return a set of rows relative to the current row, ordered by a column:
+
+| Function | Returns | Example use |
+| --- | --- | --- |
+| `OFFSET(delta, relation, orderBy)` | **One row** before or after the current one | Previous month: `OFFSET(-1, ...)` |
+| `INDEX(position, relation, orderBy)` | The **nth row** (first, last) | First or last month |
+| `WINDOW(from, fromType, to, toType, relation, orderBy)` | A **range of rows** | Running total or moving average |
+
+```dax
+3-month moving average =
+AVERAGEX (
+    WINDOW ( -2, REL, 0, REL,
+        ALLSELECTED ( 'Date'[Month Number], 'Date'[Month] ),
+        ORDERBY ( 'Date'[Month Number], ASC ) ),
+    [Total Sales] )
+```
+
+`WINDOW(-2, REL, 0, REL, ...)` = the two previous rows and the current row; `WINDOW(1, ABS, 0, REL, ...)` = from the first row to the current one (running total).
+
+**Information functions**
+
+| Function | True when |
+| --- | --- |
+| `ISBLANK(x)` | The value is blank |
+| `ISFILTERED(col)` | The column is **directly filtered** (slicer, filter) |
+| `ISCROSSFILTERED(col)` | The column is filtered directly or by a relationship |
+| `ISINSCOPE(col)` | The column is a **level of the current grouping** (hierarchy in a matrix); used to blank out subtotals |
+| `HASONEVALUE(col)` / `SELECTEDVALUE(col)` | The column has exactly one value in the current context |
+| `ISEMPTY(table)` | The table has no rows |
+
+**Exam rule of thumb:** a measure that must show only at the lowest level of a matrix hierarchy → `ISINSCOPE`; moving average/running total → `WINDOW`; previous period row → `OFFSET`.

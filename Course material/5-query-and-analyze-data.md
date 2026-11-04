@@ -243,7 +243,46 @@ The Fabric warehouse query optimizer uses **statistics** (cardinality, value dis
 
 **Exam rule of thumb:** "manually update statistics to speed up a query" = update statistics on the columns used in **GROUP BY / WHERE / JOIN** clauses.
 
-## 5.8 Exam quick reference
+## 5.8 KQL basics
+
+**Kusto Query Language (KQL)** is the language of KQL databases (Eventhouse) for real-time and time-series data. A query is a pipeline of operators joined by `|`.
+
+```kusto
+SensorData
+| where Timestamp > ago(24h)
+| summarize count() by bin(Timestamp, 1h)
+| order by Timestamp asc
+```
+
+| Operator | Purpose |
+| --- | --- |
+| `where` | Filter rows (`ago(24h)` = the last 24 hours). |
+| `summarize ... by` | Aggregate (`count()`, `sum()`, `avg()`). |
+| `bin(Timestamp, 1h)` | Round a time to an interval: used to group events per hour/day. |
+| `project` | Select/rename columns. |
+| `extend` | Add calculated columns. |
+| `take` / `top` | Return a sample / the top N rows. |
+
+KQL is not T-SQL: `GROUP BY`, `SELECT` and `DATEADD` are not valid KQL. A KQL database can also be queried with a KQL queryset, and (with OneLake availability) its data is exposed to other Fabric items.
+
+**Exam rule of thumb:** events per hour in a KQL table = `summarize count() by bin(Timestamp, 1h)`.
+
+## 5.9 Exploratory analytics: descriptive, diagnostic, predictive and prescriptive
+
+| Type | Question | Typical tools in Fabric / Power BI |
+| --- | --- | --- |
+| **Descriptive** | What happened? | Charts, cards, KPIs, matrices, scorecards, slicers; Q&A and smart narrative summaries |
+| **Diagnostic** | Why did it happen? | **Decomposition tree** (break a value down by dimensions in the order you choose), **Key influencers** (factors that drive a metric up or down), **anomaly detection** on line charts, drill-down and **drillthrough** |
+| **Predictive** | What will happen? | **Forecast** in the Analytics pane of a line chart, ML models scored with **PREDICT** in a notebook, AutoML, Copilot/AI visuals |
+| **Prescriptive** | What should we do? | **What-if parameters** and scenario analysis, optimisation models, goals and alerts that trigger actions |
+
+- **Analytics pane** (line chart with a continuous date axis): forecast, trend line, average, min/max lines.
+- A model registered in a workspace can be applied with **PREDICT** in Spark SQL or PySpark (not T-SQL or DAX); the predictions are saved as a table the report reads.
+- **Profile data** (column quality, distribution, profile) is exploratory too (see 4.15).
+
+**Exam rule of thumb:** *why* a value changed → decomposition tree or key influencers; *what next* → forecast or PREDICT.
+
+## 5.10 Exam quick reference
 
   - Connect to a warehouse → SQL connection string, Entra ID authentication, any TDS client (SSMS, VS Code, portal editor).
 
@@ -264,3 +303,7 @@ The Fabric warehouse query optimizer uses **statistics** (cardinality, value dis
   - Update warehouse statistics manually → columns used in WHERE, JOIN, GROUP BY, ORDER BY, DISTINCT.
 
   - Rename columns for a report without touching the table → view (alias).
+
+  - Events per hour in a KQL table → `summarize count() by bin(Timestamp, 1h)`; last 24 hours → `where Timestamp > ago(24h)`.
+
+  - Factors that drive a metric → **Key influencers**; break a value down by dimensions in any order → **Decomposition tree**; forecast → **Analytics pane**.

@@ -98,3 +98,44 @@ DESCRIBE HISTORY Customer;
   - Choose the **Large** format (not *Small*) when the requirement is to **minimise the time to deploy** or increase the **speed of XMLA write operations**. It is also the prerequisite for **query scale-out**.
   - Deleting unused columns reduces size but does not change the storage format; the Direct Lake storage mode is a different setting.
   - With the **default (small) storage format** a published or refreshed model is limited to about **10 GB**; a model approaching tens of GB (for example ~50 GB on an F64) can only be published and refreshed if the **Large semantic model storage format** is enabled. The maximum size then depends on the capacity SKU. Parameters, scheduled refresh and query scale-out do not change the size limit.
+
+## 7.7 Delta Change Data Feed
+
+The **change data feed (CDF)** of a Delta table records **row-level changes** (inserts, updates, deletes), so a downstream process can read **only the rows that changed** since a given version or timestamp.
+
+```sql
+ALTER TABLE Orders SET TBLPROPERTIES (delta.enableChangeDataFeed = true);
+SELECT * FROM table_changes('Orders', 5);
+```
+
+- Each change row has `_change_type` (`insert`, `update_preimage`, `update_postimage`, `delete`), `_commit_version` and `_commit_timestamp`.
+- It is enabled per table; only changes made after it is enabled are captured.
+- Not to be confused with: `OPTIMIZE` (compacts small files), V-Order (read-optimised file layout), `VACUUM` (removes unreferenced files) and time travel (reads an old version of the whole table).
+
+**Exam rule of thumb:** "process only the inserted/updated/deleted rows since the last run" = **change data feed**.
+
+## 7.8 Data loading performance: dataflows, notebooks and SQL
+
+Identify the slow step first (refresh history, Monitoring hub, Spark UI, query insights), then fix it.
+
+**Dataflows Gen2**
+
+- Enable **Fast Copy** for large files or tables with few transformations (see 0.3); use **staging** for heavy transformations.
+- Check **query folding** (right-click a step > View Native Query; see 4.19): put foldable steps (filters, column selection) first, avoid steps that break folding (index column, merges across sources).
+- Remove unused columns early; load only what is needed.
+
+**Notebooks (Spark)**
+
+- Size the **pool** and runtime in the workspace or environment Spark settings (see 0.11); **high concurrency** mode shares a session between notebooks to avoid start-up time.
+- Reduce shuffles: **broadcast** the small side of a join, filter early, select only the needed columns.
+- Avoid `collect()` and `toPandas()` on large data (they pull everything to the driver).
+- Write efficiently: partition on a low-cardinality column (see 3.20), avoid many tiny files (**optimize write**, `OPTIMIZE`), use V-Order for read-heavy tables.
+- `cache()` a DataFrame that is reused several times.
+
+**SQL (warehouse and SQL analytics endpoint)**
+
+- Keep **statistics** up to date (see 5.7); avoid `SELECT *`; filter early and join on matching data types.
+- Use **query insights** and DMVs to find long-running queries (see 5.6).
+- Load with `COPY INTO` or CTAS instead of row-by-row inserts (see 3.19).
+
+**Exam rule of thumb:** big file load with no transformation → **Fast Copy**; slow dataflow with transformations → check **query folding**; slow join with a small table in Spark → **broadcast**.

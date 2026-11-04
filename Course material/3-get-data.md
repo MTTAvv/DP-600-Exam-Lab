@@ -461,7 +461,43 @@ An **eventstream** captures, transforms and routes streaming events (Event Hubs,
 
 Tip: Copy data supports parallelism and (for supported sources) **Fast Copy**; Lookup returns small result sets only.
 
-## 3.19 Exam quick reference
+## 3.19 Loading a warehouse with T-SQL: COPY INTO
+
+**COPY INTO** is the recommended T-SQL statement for **high-throughput ingestion** of files (Parquet, CSV) from external storage (for example ADLS Gen2) into a Fabric **warehouse** table.
+
+```sql
+COPY INTO dbo.Sales
+FROM 'https://storage1.dfs.core.windows.net/files/sales/*.parquet'
+WITH (FILE_TYPE = 'PARQUET');
+```
+
+- Supports wildcards, several file formats and credentials (Entra ID, SAS, storage key).
+- **BULK INSERT** is not available in a Fabric warehouse; `INSERT ... VALUES` is for small sets of rows; `CREATE TABLE ... AS CLONE OF` copies an existing table, it does not load files.
+- Other ways to load a warehouse: pipeline **Copy data** activity (large volumes, low-code), Dataflow Gen2 (transformations), `CTAS` / `INSERT ... SELECT` for data already in OneLake (cross-database query on a lakehouse).
+
+**Exam rule of thumb:** "load files into a warehouse with T-SQL, highest throughput" = **COPY INTO**.
+
+## 3.20 Partitioning lakehouse tables and files
+
+**Partitioning** stores the data in one folder per value of a column (Hive-style, for example `Year=2024/`), so queries that filter on that column read only the matching folders (**partition pruning**).
+
+```python
+df.write.format("delta").partitionBy("Year").mode("overwrite").saveAsTable("sales")
+```
+
+**Choosing the partition column**
+
+- Pick a column with **low to medium cardinality** that is **often used in filters**: year, year and month, region, country.
+- **Avoid high-cardinality columns** such as OrderID, CustomerID or a full timestamp: they create thousands of tiny folders and files.
+- Avoid **over-partitioning**: each partition should hold a substantial amount of data (as a rule, hundreds of MB to GB). Many small files slow down reads and metadata handling; fix them with `OPTIMIZE` (see 7.5).
+- Small tables do not need partitioning.
+- The partition column is chosen when the table is written; to change it you rewrite the table.
+
+In a pipeline **Copy data** destination, the partition option is available only with the **Overwrite** table action (see 3.12).
+
+**Exam rule of thumb:** partition on a low-cardinality column that queries filter on (for example the year); never on a unique key.
+
+## 3.21 Exam quick reference
 
   - Low-code transformations, Power Query, 150+ connectors → dataflow Gen2.
 
@@ -504,3 +540,7 @@ Tip: Copy data supports parallelism and (for supported sources) **Fast Copy**; L
   - Other Fabric items must query a KQL database → enable OneLake availability (connect the database to OneLake).
 
   - Copy data General tab → only Name is mandatory (Timeout 12 h, Retry 0, Retry interval 30 s are optional). Very large volume, no transformation, low-code → pipeline Copy data.
+
+  - Load files into a warehouse with T-SQL, highest throughput → **COPY INTO** (BULK INSERT is not supported).
+
+  - Partition column for a large lakehouse table → low-cardinality column used in filters (year, region); never a unique key (OrderID, CustomerID).

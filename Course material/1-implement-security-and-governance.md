@@ -307,7 +307,24 @@ External people (partners, customers) are Microsoft Entra **B2B guest users**. S
 | Control access to a specific object | T-SQL GRANT, DENY, REVOKE |
 | Classify and protect data | Sensitivity labels |
 
-## 1.12 Exam quick reference
+## 1.12 Sharing a lakehouse: Read, ReadAll, ReadData and Build
+
+Sharing an item gives access **without a workspace role**. When you share a **lakehouse** (or warehouse) you choose the extra permissions:
+
+| Option in the sharing dialog | Permission | What the user can do |
+| --- | --- | --- |
+| *(default)* | **Read** | See the item and connect to it. **No access to the data**: it is the minimum. |
+| **Read all SQL endpoint data** | **ReadData** | Query the tables through the **SQL analytics endpoint** with T-SQL (no Spark). |
+| **Read all Apache Spark** | **ReadAll** | Read the data and files with **Spark** (notebooks) and from **OneLake**. |
+| **Build reports on the default semantic model** | **Build** | Create reports on the default semantic model. |
+
+- Each extra permission is added on top of Read; choose only what the user needs (least privilege).
+- Sharing a **workspace** instead means adding people with a **workspace role** (Admin, Member, Contributor, Viewer; see 1.1), which gives access to all the items of the workspace.
+- Folder-level control inside the lakehouse uses **OneLake security** roles (see 1.3).
+
+**Exam rule of thumb:** Spark notebook access to a shared lakehouse = **ReadAll** (Read all Apache Spark); T-SQL access = **ReadData** (Read all SQL endpoint data).
+
+## 1.13 Exam quick reference
 
   - > Workspace roles → Viewer is read-only (T-SQL only, no Spark), Contributor creates and writes and reads with Spark, Member adds people, Admin manages the workspace.
 
@@ -330,3 +347,5 @@ External people (partners, customers) are Microsoft Entra **B2B guest users**. S
   - > Share with external partners → Power BI app + row-level security + fixed identity on the data source; never email attachments.
 
   - > Hide the values of a column from non-privileged users → dynamic data masking (UNMASK permission shows real values); hide rows → RLS; hide objects → OLS or GRANT/DENY.
+
+  - Share a lakehouse so a user can read it with Spark → **Read all Apache Spark (ReadAll)**; with T-SQL → **Read all SQL endpoint data (ReadData)**; default Read gives no data access.
